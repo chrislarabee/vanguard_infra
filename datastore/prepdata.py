@@ -92,8 +92,7 @@ class PrepData:
                 if ignore:
                     print('Removing ignored columns...')
                     raw.drop(columns=ignore, inplace=True)
-                n = self._output_dir.joinpath(f'{file_name}_{chunks}.csv')
-                print(f'Writing chunk to {self._output_dir} as {n}...')
+                print(f'Writing chunk to {self._output_dir}/datasets db...')
                 raw.genius.to_sqlite(self._output_dir, file_name, drop_first=False)
                 print(
                     f'Chunk {chunks} processed (Rows {self._rows_processed} to '
@@ -109,8 +108,7 @@ class PrepData:
         
     def load_cache(self):
         """
-        Loads a saved PrepData cache from the model's datastore
-        directory.
+        Loads a saved PrepData cache from the sim_db directory.
         """
         with open(self._prep_cache, 'r') as r:
             c = json.load(r)
@@ -119,7 +117,7 @@ class PrepData:
 
     def save_cache(self):
         """
-        Saves the PrepData cache to the model's datastore directory.
+        Saves the PrepData cache to the sim_db directory.
         """
         c = dict(
             header=self._header, 
