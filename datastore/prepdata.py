@@ -8,6 +8,7 @@ from datetime import datetime as dt
 import pandas as pd
 import datagenius as dg
 
+from . import constants, util as u
 
 class PrepData:
     """
@@ -34,10 +35,7 @@ class PrepData:
             prep_func: Callable, 
             batch_size: int = 100000):
         self._func = prep_func
-        dstore = Path('datastore') 
-        self._output_dir = dstore.joinpath('sim_db')
-        self._input_dir = dstore.joinpath('raw_data')
-        self._prep_cache = self._output_dir.joinpath('prep_cache.json')
+        self._prep_cache = constants.SIMDB.joinpath('prep_cache.json')
         self.batch_size: int = batch_size
         self._header: list = None
         self._chunks = 1
@@ -64,9 +62,10 @@ class PrepData:
         print(f'Processing file {file_name} in chunks of {self.batch_size}')
         if '.csv' in file_name:
             file_name, _ = os.path.splitext(file_name)
-        p = self._input_dir.joinpath(f'{file_name}.csv')
+        p = constants.RAW.joinpath(f'{file_name}.csv')
         chunks = 1
         start = dt.now()
+        u.print_bar()
         for raw in pd.read_csv(p, chunksize=self.batch_size):
             if chunks < self._chunks: 
                 print(
@@ -80,6 +79,7 @@ class PrepData:
                     f'{self._rows_processed + len(raw)}). Total runtime = '
                     f'{dt.now() - start}.'
                 )
+                u.print_bar()
                 chunk_start = dt.now()
                 if self._header is None:
                     self._header = list(raw.columns)
@@ -92,8 +92,8 @@ class PrepData:
                 if ignore:
                     print('Removing ignored columns...')
                     raw.drop(columns=ignore, inplace=True)
-                print(f'Writing chunk to {self._output_dir}/datasets db...')
-                raw.genius.to_sqlite(self._output_dir, file_name, drop_first=False)
+                print(f'Writing chunk to {constants.SIMDB}/datasets db...')
+                raw.genius.to_sqlite(constants.SIMDB, file_name, drop_first=False)
                 print(
                     f'Chunk {chunks} processed (Rows {self._rows_processed} to '
                     f'{self._rows_processed + len(raw)}). '
@@ -101,6 +101,7 @@ class PrepData:
                 print(f'Saving cache...')
                 self._chunks += 1
                 self.save_cache()
+                u.print_bar()
             self._rows_processed += len(raw)
             chunks += 1
         print(f'Data preparation complete. Total runtime = {dt.now() - start}')
