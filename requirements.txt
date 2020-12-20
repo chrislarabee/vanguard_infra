@@ -2,3 +2,6 @@ pylint
 pytest
 sqlalchemy
 apache_beam
+kafka-python
+pandas
+git+https://gitlab.com/mnhs/bipi/datagenius.git#egg=data-genius
