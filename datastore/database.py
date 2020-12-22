@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, List, Optional
 from sqlite3 import Cursor
 
 cenblocks_cols = {
@@ -129,22 +129,30 @@ voter_cols = {
 }
 
 
-# def populate_cenblocks_table(cursor: Cursor):
-#     do_sum = ['is_donor', 'total']
-#     return (
-#         f"""
-#         INSERT INTO cenblocks (
-#             {k + ',' for k in cenblocks_cols.keys()}
-#         )
+def gen_populate_cenblocks(source_table: str) -> str:
+    """
+    Convenience function for generating the insert statement needed to 
+    populate the cenblocks table from the prepped raw data table.
 
-#         SELECT
-#             blockgeoid,
-#             totalpop,
-#             {'MAX(' + k + '), ' if k is not in do_sum else 'SUM(' + k + '), ' }
-#         FROM oh_dist4
-#         GROUP BY blockgeoid, totalpop;
-#         """
-#     )
+    Args:
+        source_table (str): The name of the table to pull data from.
+    Returns:
+        str: A SQL insert and select statement as a str, tailored to the 
+            needs of the cenblocks table.
+    """
+    do_sum = dict(total_donors='SUM(is_donor)', donation_total='SUM(total)') 
+    do_nothing = ['blockgeoid']
+    select_cols = []
+    for k in cenblocks_cols.keys():
+        if k in do_nothing:
+            select_cols.append(k)
+        elif k in do_sum.keys():
+            select_cols.append(do_sum[k])
+        else:
+            select_cols.append(f'MAX({k})')
+    insert = gen_insert_table('cenblocks', cenblocks_cols)
+    select = gen_select(source_table, select_cols, do_nothing)
+    return f"{insert} {select}"
 
 
 def gen_create_table(table_name: str, column_dict: Dict[str, str]) -> str:
@@ -179,7 +187,27 @@ def gen_insert_table(table_name: str, column_dict: Dict[str, str]) -> str:
     Returns:
         str: A SQL insert statement as a str.
     """
-    base = f"INSERT INTO {table_name} ("
-    for k in column_dict.keys():
-        base += k + ', ' 
-    return base[:-2] + ') '
+    return f"INSERT INTO {table_name} ({', '.join(column_dict.keys())}) "
+
+
+def gen_select(
+        table_name: str, 
+        columns: List[str],
+        group_by: Optional[List[str]] = None) -> str:
+    """
+    Convenience function for generating a select statement based on a 
+    passed dictionary.
+
+    Args:
+        table_name (str): The name of the table to select from. 
+        columns (List[str]): A list of SQL strings valid as column 
+            values to select.
+        group_by (Optional[List[str]], optional): A list of SQL strings 
+            valid as columns to group by. Defaults to None.
+
+    Returns:
+        str: A SQL select statement as a str.
+    """
+    base = f"SELECT {', '.join(columns)}"
+    group_by = f" GROUP BY {', '.join(group_by)}" if group_by else ''
+    return f'{base} FROM {table_name}{group_by};'
