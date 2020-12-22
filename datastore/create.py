@@ -15,7 +15,7 @@ def setup_dirs(recreate=False):
     sim_db.mkdir(exist_ok=True)
 
 
-def build_out_db():
+def build_out_db(source_table: str):
     print('Begin database build out...')
     u.print_bar()
     conn = sqlite3.connect(constants.SIMDB.joinpath('datasets.db'))
@@ -30,7 +30,10 @@ def build_out_db():
     print('Table creation complete.')
     u.print_bar()
     print('Populating census blocks (cenblocks) table...')
-    c.execute(db.gen_populate_cenblocks())
+    c.execute(db.gen_populate_cenblocks(source_table))
+    conn.commit()
+    print('Populating voters table...')
+    c.execute(db.gen_populate_voters(source_table))
     conn.commit()
     print('Table population complete.')
     u.print_bar()
@@ -62,12 +65,13 @@ if __name__ == "__main__":
     raw_file = args.raw_file
     if not raw_file:
         raw_file = os.listdir('datastore/raw_data')[0]
+    raw_file = Path(raw_file)
 
     setup_dirs(args.recreate)
 
     if args.recreate:
         p = PrepData(lib.prep_raw_data)
-        p.execute(raw_file)
+        p.execute(raw_file.stem)
         u.print_bar()
     
-    build_out_db()
+    build_out_db(raw_file.stem)

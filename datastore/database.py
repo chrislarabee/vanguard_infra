@@ -155,6 +155,22 @@ def gen_populate_cenblocks(source_table: str) -> str:
     return f"{insert} {select}"
 
 
+def gen_populate_voters(source_table: str) -> str:
+    """
+    Convenience function for generating the insert statement needed to 
+    populate the voters table from the prepped raw data table.
+
+    Args:
+        source_table (str): The name of the table to pull data from.
+    Returns:
+        str: A SQL insert and select statement as a str, tailored to the 
+            needs of the voters table.
+    """
+    insert = gen_insert_table('voters', voter_cols)
+    select = gen_select(source_table, voter_cols.keys())
+    return f"{insert} {select}"
+
+
 def gen_create_table(table_name: str, column_dict: Dict[str, str]) -> str:
     """
     Convenience method for generating a create table statement based on 
