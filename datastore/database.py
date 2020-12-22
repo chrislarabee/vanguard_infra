@@ -1,6 +1,8 @@
 from typing import Dict, List, Optional
 from sqlite3 import Cursor
 
+import sqlalchemy as sa
+
 cenblocks_cols = {
     'blockgeoid': 'INTEGER',
     'totalpop': 'INTEGER',
@@ -101,6 +103,7 @@ district_cols = {
 }
 
 voter_cols = {
+    'id': 'INTEGER PRIMARY KEY',
     'first_name': 'VARCHAR',
     'middle_name': 'VARCHAR',
     'last_name': 'VARCHAR',
@@ -112,8 +115,9 @@ voter_cols = {
     'state': 'VARCHAR',
     'zip': 'INTEGER',
     'plus4': 'FLOAT',
-    'precinct': 'VARCHAR',
-    'district_num': 'INTEGER',
+    # Some voters have more than 1 precinct/district_num.
+    # 'precinct': 'VARCHAR',
+    # 'district_num': 'INTEGER',
     'ohvfid': 'VARCHAR',
     'blockgeoid': 'INTEGER', 
     'demdonationamounts': 'VARCHAR',
@@ -127,6 +131,23 @@ voter_cols = {
     'days_since': 'INTEGER',
     'is_donor': 'INTEGER'
 }
+
+calls_cols = {
+    'ohvfid': 'VARCHAR',
+    'call_dt': 'VARCHAR',
+    'call_result': 'INTEGER',
+}
+
+
+def gen_call_data(
+        conn: Cursor, 
+        pos_resp_rate: Optional[float] = 0.1,
+        num_samples: Optional[int] = None,
+        batch_size: Optional[int] = 250000) -> None:
+    if num_samples is None:
+        num_samples = conn.execute("select count(*) from voters;").fetchone()
+    
+    
 
 
 def gen_populate_cenblocks(source_table: str) -> str:
@@ -166,8 +187,10 @@ def gen_populate_voters(source_table: str) -> str:
         str: A SQL insert and select statement as a str, tailored to the 
             needs of the voters table.
     """
-    insert = gen_insert_table('voters', voter_cols)
-    select = gen_select(source_table, voter_cols.keys())
+    v_cols = voter_cols.copy()
+    v_cols.pop('id')
+    insert = gen_insert_table('voters', v_cols)
+    select = gen_select(source_table, v_cols.keys(), v_cols.keys())
     return f"{insert} {select}"
 
 

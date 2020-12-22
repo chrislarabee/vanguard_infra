@@ -9,6 +9,11 @@ def test_gen_populate_cenblocks():
     assert ' FROM oh_dist4 GROUP BY blockgeoid;' in result
 
 
+def test_gen_populate_voters():
+    result = db.gen_populate_voters('oh_dist4')
+    assert ' id, ' not in result
+
+
 def test_create_table():
     expected = "CREATE TABLE test (col_a INTEGER, col_b VARCHAR, col_c FLOAT);"
     assert db.gen_create_table(
