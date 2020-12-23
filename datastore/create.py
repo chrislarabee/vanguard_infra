@@ -4,31 +4,28 @@ import shutil
 from pathlib import Path
 import sqlite3
 
+import sqlalchemy as sa
+
 from .prepdata import PrepData
 from . import constants, lib, database as db, util as u
 
 
 def setup_dirs(recreate=False):
-    sim_db = Path('datastore/sim_db')
     if recreate:
-        shutil.rmtree(sim_db)
-    sim_db.mkdir(exist_ok=True)
+        shutil.rmtree(constants.SIMDB)
+    constants.SIMDB.mkdir(exist_ok=True)
 
 
 def build_out_db(source_table: str):
     print('Begin database build out...')
     u.print_bar()
-    conn = sqlite3.connect(constants.SIMDB.joinpath('datasets.db'))
-    c = conn.cursor()
-    print('Creating districts table...')
-    c.execute(db.gen_create_table('districts', db.district_cols))
-    print('Creating census blocks (cenblocks) table...')
-    c.execute(db.gen_create_table('cenblocks', db.cenblocks_cols))
-    print('Creating voter table...')
-    c.execute(db.gen_create_table('voters', db.voter_cols))
-    conn.commit()
+    print('Creating tables...')
+    engine = sa.create_engine('sqlite:///datastore/sim_db/datasets.db')
+    db.Base.metadata.create_all(engine)
     print('Table creation complete.')
     u.print_bar()
+    conn = sqlite3.connect(constants.SIMDB.joinpath('datasets.db'))
+    c = conn.cursor()
     print('Populating census blocks (cenblocks) table...')
     c.execute(db.gen_populate_cenblocks(source_table))
     conn.commit()
@@ -66,7 +63,6 @@ if __name__ == "__main__":
     if not raw_file:
         raw_file = os.listdir('datastore/raw_data')[0]
     raw_file = Path(raw_file)
-
     setup_dirs(args.recreate)
 
     if args.recreate:

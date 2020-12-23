@@ -82,7 +82,9 @@ class PrepData:
                 u.print_bar()
                 chunk_start = dt.now()
                 if self._header is None:
-                    self._header = list(raw.columns)
+                    h, _ = dg.standardize_header(raw.columns)
+                    self._header = h
+                    raw.columns = h
                 print('Beginning preprocessing...')
                 step_start = dt.now()
                 raw, md = raw.genius.preprocess()
