@@ -1,4 +1,42 @@
+from pathlib import Path
+
+import pytest
+from sqlalchemy import create_engine, func as sa_func
+from sqlalchemy.orm import sessionmaker
+
 import datastore.database as db
+
+
+@pytest.fixture
+def sample_voters():
+    return [
+        db.Voter(ohvfid='001', first_name='Justin'),
+        db.Voter(ohvfid='002', first_name='Travis'),
+        db.Voter(ohvfid='003', first_name='Griffin'),
+    ]
+
+
+@pytest.fixture
+def test_db(sample_voters):
+    p = Path('datastore/tests/test_db.db')
+    engine = create_engine(
+        f"sqlite:///{p}",
+        connect_args={"check_same_thread": False}
+    )
+    db.Base.metadata.create_all(engine)
+    TestingSession = sessionmaker(engine)
+    s = TestingSession()
+    s.add_all(sample_voters)
+    s.commit()
+    yield s
+    s.close()
+    p.unlink()
+
+
+def test_gen_call_data(test_db):
+    db.gen_call_data(test_db, 1/3)
+    assert test_db.query(db.Call).count() == 3
+    assert test_db.query(sa_func.sum(db.Call.call_result)).one()[0] == 1
 
 
 def test_gen_populate_cenblocks():

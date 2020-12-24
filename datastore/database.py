@@ -1,10 +1,15 @@
 from typing import Dict, List, Optional
 from sqlite3 import Cursor
 import math
+from random import random
 
 import sqlalchemy as sa
+from sqlalchemy.orm import Session
 from sqlalchemy import Column, Integer, String, Float
 from sqlalchemy.ext.declarative import as_declarative
+import pandas as pd
+
+from . import util as u
 
 @as_declarative()
 class Base:
@@ -172,25 +177,50 @@ class District(Base):
 
 
 def gen_call_data(
-        conn: Cursor, 
+        session: Session,
         pos_resp_rate: Optional[float] = 0.1,
         num_samples: Optional[int] = None,
         batch_size: Optional[int] = 250000) -> None:
+    """
+    Generates simulated call data and loads into the database connected 
+    via the passed Session.
+    -
+    Args:
+        session (Session): A SQLAlchemy Session object.
+        pos_resp_rate (Optional[float], optional): The overall positive 
+            response rate you want to simulate. This percentage of your 
+            number of samples will be positive. Defaults to 0.1.
+        num_samples (Optional[int], optional): The number of samples you
+            want to generate. Defaults to None, which will mean that the 
+            entire voter table will be used.
+        batch_size (Optional[int], optional): The size of the batches 
+            you want to pull from the voter table. Use this if your 
+            voter table is very large. Defaults to 250000, or 
+            num_samples if that is lower.
+    """
     if num_samples is None:
-        num_samples = conn.execute("select count(*) from voters;").fetchone()
+        num_samples = session.query(Voter).count()
     start = 1
     end = batch_size if batch_size < num_samples else num_samples
     num_batches = math.ceil(num_samples / batch_size)
-    for _ in range(num_batches):
-        q = f"select ohvfid from voters where id between {start} and {end};"
-        batch = conn.execute(q).fetchall()
-        # do stuff
+    for i in range(num_batches):
+        print(f'Processing batch {i} of {num_batches}...')
+        batch = session.query(Voter, Voter.ohvfid).\
+                filter(Voter.id>=start).\
+                filter(Voter.id<=end).all()
+        df = pd.DataFrame(batch)
+        x = df.sample(frac=pos_resp_rate)
+        df['result'] = df.apply(
+            lambda row: 1 if row.index.values[0] in x.index else 0,
+            axis=1
+        )
+        calls = df.apply(
+            lambda row: Call(ohvfid=row.ohvfid, call_result=row.result), 
+            axis=1)
+        session.add_all(list(calls))
         start += batch_size
         end += batch_size
-
-
-    
-    
+    session.commit()
 
 
 def gen_populate_cenblocks(source_table: str) -> str:

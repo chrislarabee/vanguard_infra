@@ -5,6 +5,8 @@ from pathlib import Path
 import sqlite3
 
 import sqlalchemy as sa
+from sqlalchemy.engine import Engine
+from sqlalchemy.orm import sessionmaker
 
 from .prepdata import PrepData
 from . import constants, lib, database as db, util as u
@@ -19,24 +21,36 @@ def setup_dirs(recreate=False):
 def build_out_db(source_table: str):
     print('Begin database build out...')
     u.print_bar()
-    print('Creating tables...')
-    engine = sa.create_engine('sqlite:///datastore/sim_db/datasets.db')
-    db.Base.metadata.create_all(engine)
-    print('Table creation complete.')
-    u.print_bar()
     conn = sqlite3.connect(constants.SIMDB.joinpath('datasets.db'))
     c = conn.cursor()
-    print('Populating census blocks (cenblocks) table...')
-    c.execute(db.gen_populate_cenblocks(source_table))
-    conn.commit()
-    print('Populating voters table...')
-    c.execute(db.gen_populate_voters(source_table))
-    conn.commit()
-    print('Table population complete.')
-    u.print_bar()
+    try:
+        print('Populating census blocks (cenblocks) table...')
+        c.execute(db.gen_populate_cenblocks(source_table))
+        conn.commit()
+        print('Populating voters table...')
+        c.execute(db.gen_populate_voters(source_table))
+        conn.commit()
+        print('Table population complete.')
+        u.print_bar()
+    finally:
+        conn.close()
     print('Database build out complete.')
-    conn.close()
 
+
+def gen_and_populate_calls(engine: Engine):
+    Session = sessionmaker(bind=engine)
+    s = Session()
+    print('Clearing out any existing call data...')
+    s.execute(sa.delete(db.Call))
+    s.commit()
+    print('Generating simulated call data...')
+    resp_rates = dict(D=0.6, R=0.05, G=0.05, X=0.1)
+    try:
+        db.gen_call_data(s, resp_rates)
+    finally:
+        s.close()
+    u.print_bar()
+    print('Simulated call data generated.')
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -51,10 +65,11 @@ if __name__ == "__main__":
 
     parser.add_argument(
         '--recreate', '-c', 
-        type=bool,
-        default=False,
-        help='If True, delete the existing sim_db directory and recreate '
-             'from scratch. Default is False.'
+        default='n',
+        help='Determines what parts, if any, of the simulated database '
+             'to create from scratch (db=Build out the database, '
+             'call=Re-generate the call data, all=Recreate everything, ' 
+             'n=Do not re-create anything (this is the default)).'
     )
 
     args = parser.parse_args()
@@ -63,11 +78,22 @@ if __name__ == "__main__":
     if not raw_file:
         raw_file = os.listdir('datastore/raw_data')[0]
     raw_file = Path(raw_file)
-    setup_dirs(args.recreate)
+    setup_dirs(args.recreate == 'all')
 
-    if args.recreate:
+    if args.recreate == 'all':
         p = PrepData(lib.prep_raw_data)
         p.execute(raw_file.stem)
         u.print_bar()
     
-    build_out_db(raw_file.stem)
+    engine = sa.create_engine('sqlite:///datastore/sim_db/datasets.db')
+    
+    if args.recreate in ['all', 'db']:
+        print('Creating tables...')
+        db.Base.metadata.drop_all(engine)
+        db.Base.metadata.create_all(engine)
+        print('Table creation complete.')
+        u.print_bar()
+        build_out_db(raw_file.stem)
+
+    if args.recreate in ['all', 'call']:
+        gen_and_populate_calls(engine)
