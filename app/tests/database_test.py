@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy import create_engine, func as sa_func
 from sqlalchemy.orm import sessionmaker
 
-import datastore.database as db
+from ..datastore import database as db
 
 
 @pytest.fixture
@@ -18,9 +18,8 @@ def sample_voters():
 
 @pytest.fixture
 def test_db(sample_voters):
-    p = Path('datastore/tests/test_db.db')
     engine = create_engine(
-        f"sqlite:///{p}",
+        "sqlite://",
         connect_args={"check_same_thread": False}
     )
     db.Base.metadata.create_all(engine)
@@ -30,7 +29,6 @@ def test_db(sample_voters):
     s.commit()
     yield s
     s.close()
-    p.unlink()
 
 
 def test_gen_call_data(test_db):

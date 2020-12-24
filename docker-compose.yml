@@ -19,12 +19,10 @@ services:
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
     volumes:
      - /var/run/docker.sock:/var/run/docker.sock
-  datastore:
-    image: keinos/sqlite3:latest
-    restart: always
-    entrypoint: /usr/bin/sqlite3 /sim_db/datasets.db
+  callcenter:
+    build: .
     tty: true
     ports:
-    - "8000:8000"
+    - "8001:8001"
     volumes:
-    - ./datastore/sim_db:/sim_db
+      - ./app:/app
