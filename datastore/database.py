@@ -204,23 +204,24 @@ def gen_call_data(
     end = batch_size if batch_size < num_samples else num_samples
     num_batches = math.ceil(num_samples / batch_size)
     for i in range(num_batches):
-        print(f'Processing batch {i} of {num_batches}...')
+        print(
+            f'Processing batch {i + 1} of {num_batches} (rows {start} to '
+            f'{end})...', end='\r'
+        )
         batch = session.query(Voter, Voter.ohvfid).\
                 filter(Voter.id>=start).\
                 filter(Voter.id<=end).all()
         df = pd.DataFrame(batch)
-        x = df.sample(frac=pos_resp_rate)
-        df['result'] = df.apply(
-            lambda row: 1 if row.index.values[0] in x.index else 0,
-            axis=1
-        )
+        x = df.sample(frac=pos_resp_rate).index.tolist()
+        df['result'] = df.index.isin(x).astype(int)
         calls = df.apply(
             lambda row: Call(ohvfid=row.ohvfid, call_result=row.result), 
             axis=1)
         session.add_all(list(calls))
+        session.commit()
         start += batch_size
         end += batch_size
-    session.commit()
+    print('\nAll batches successfully processed.')
 
 
 def gen_populate_cenblocks(source_table: str) -> str:

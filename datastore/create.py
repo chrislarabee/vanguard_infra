@@ -38,15 +38,17 @@ def build_out_db(source_table: str):
 
 
 def gen_and_populate_calls(engine: Engine):
+    u.print_bar()
+    print('Begin simulated call data generation...')
+    u.print_bar()
     Session = sessionmaker(bind=engine)
     s = Session()
     print('Clearing out any existing call data...')
     s.execute(sa.delete(db.Call))
     s.commit()
-    print('Generating simulated call data...')
-    resp_rates = dict(D=0.6, R=0.05, G=0.05, X=0.1)
+    print('Generating new simulated call data...')
     try:
-        db.gen_call_data(s, resp_rates)
+        db.gen_call_data(s, batch_size=10000)
     finally:
         s.close()
     u.print_bar()
@@ -88,7 +90,8 @@ if __name__ == "__main__":
     engine = sa.create_engine('sqlite:///datastore/sim_db/datasets.db')
     
     if args.recreate in ['all', 'db']:
-        print('Creating tables...')
+        print('Begin table creation.')
+        u.print_bar()
         db.Base.metadata.drop_all(engine)
         db.Base.metadata.create_all(engine)
         print('Table creation complete.')
