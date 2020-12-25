@@ -5,14 +5,8 @@ from kafka import KafkaProducer
 import sqlalchemy as sa
 from sqlalchemy.orm import sessionmaker, Session
 
-from ..datastore.database import Call
-
-
-def connect_to_sim_db():
-    engine = sa.create_engine('sqlite:///app/datastore/sim_db/datasets.db')
-    CallSession = sessionmaker(bind=engine)
-    s = CallSession()
-    return s
+from .db.models import Call
+import util as u
 
 
 def call_stream_generator(db: Session, batch_size: int = 10000):
@@ -40,6 +34,6 @@ def stream_calls(db: Session, batch_size: int = 10000, secs_btw: int = 2):
 
 
 if __name__ == '__main__':
-    db = connect_to_sim_db()
+    db = u.connect_to_sim_db()
     stream_calls(db)
     db.close()

@@ -1,17 +1,10 @@
-from typing import Dict, List, Optional
-from sqlite3 import Cursor
-import math
-from random import random
+from typing import List
 
 import sqlalchemy as sa
-from sqlalchemy.orm import Session
 from sqlalchemy import Column, Integer, String, Float
-from sqlalchemy.ext.declarative import as_declarative
-import pandas as pd
+from sqlalchemy.ext.declarative import declarative_base
 
-from . import util as u
 
-@as_declarative()
 class Base:
     @classmethod
     def gen_column_list(cls) -> List[str]:
@@ -22,6 +15,9 @@ class Base:
         """
         return [i.key for i in sa.inspect(cls).mapper.column_attrs]
 
+# Using this approach instead of as_declarative decorator helps vscode's
+# error checking.
+Base = declarative_base(cls=Base)
 
 class CensusBlock(Base):
     __tablename__ = 'cenblocks'
@@ -174,135 +170,3 @@ class District(Base):
     totalpop = Column(Integer)
     total_donors = Column(Float)
     donation_total = Column(Float)
-
-
-def gen_call_data(
-        session: Session,
-        pos_resp_rate: Optional[float] = 0.1,
-        num_samples: Optional[int] = None,
-        batch_size: Optional[int] = 250000) -> None:
-    """
-    Generates simulated call data and loads into the database connected 
-    via the passed Session.
-    -
-    Args:
-        session (Session): A SQLAlchemy Session object.
-        pos_resp_rate (Optional[float], optional): The overall positive 
-            response rate you want to simulate. This percentage of your 
-            number of samples will be positive. Defaults to 0.1.
-        num_samples (Optional[int], optional): The number of samples you
-            want to generate. Defaults to None, which will mean that the 
-            entire voter table will be used.
-        batch_size (Optional[int], optional): The size of the batches 
-            you want to pull from the voter table. Use this if your 
-            voter table is very large. Defaults to 250000, or 
-            num_samples if that is lower.
-    """
-    if num_samples is None:
-        num_samples = session.query(Voter).count()
-    start = 1
-    end = batch_size if batch_size < num_samples else num_samples
-    num_batches = math.ceil(num_samples / batch_size)
-    for i in range(num_batches):
-        print(
-            f'Processing batch {i + 1} of {num_batches} (rows {start} to '
-            f'{end})...', end='\r'
-        )
-        batch = session.query(Voter, Voter.ohvfid).\
-                filter(Voter.id>=start).\
-                filter(Voter.id<=end).all()
-        df = pd.DataFrame(batch)
-        x = df.sample(frac=pos_resp_rate).index.tolist()
-        df['result'] = df.index.isin(x).astype(int)
-        calls = df.apply(
-            lambda row: Call(ohvfid=row.ohvfid, call_result=row.result), 
-            axis=1)
-        session.add_all(list(calls))
-        session.commit()
-        start += batch_size
-        end += batch_size
-    print('\nAll batches successfully processed.')
-
-
-def gen_populate_cenblocks(source_table: str) -> str:
-    """
-    Convenience function for generating the insert statement needed to 
-    populate the cenblocks table from the prepped raw data table.
-    -
-    Args:
-        source_table (str): The name of the table to pull data from.
-    Returns:
-        str: A SQL insert and select statement as a str, tailored to the 
-            needs of the cenblocks table.
-    """
-    do_sum = dict(total_donors='SUM(is_donor)', donation_total='SUM(total)') 
-    do_nothing = ['blockgeoid']
-    select_cols = []
-    cenblocks_cols = CensusBlock.gen_column_list()
-    for k in cenblocks_cols:
-        if k in do_nothing:
-            select_cols.append(k)
-        elif k in do_sum.keys():
-            select_cols.append(do_sum[k])
-        else:
-            select_cols.append(f'MAX({k})')
-    insert = gen_insert_table('cenblocks', cenblocks_cols)
-    select = gen_select(source_table, select_cols, do_nothing)
-    return f"{insert} {select}"
-
-
-def gen_populate_voters(source_table: str) -> str:
-    """
-    Convenience function for generating the insert statement needed to 
-    populate the voters table from the prepped raw data table.
-    -
-    Args:
-        source_table (str): The name of the table to pull data from.
-    Returns:
-        str: A SQL insert and select statement as a str, tailored to the 
-            needs of the voters table.
-    """
-    v_cols = Voter.gen_column_list()
-    v_cols.pop(0) # Remove id column.
-    insert = gen_insert_table('voters', v_cols)
-    select = gen_select(source_table, v_cols, v_cols)
-    return f"{insert} {select}"
-
-
-def gen_insert_table(table_name: str, columns: List[str]) -> str:
-    """
-    Convenience method for generating an insert statement based on one 
-    of the dictionaries above.
-    -
-    Args:
-        table_name (str): The name of the table to insert into. 
-        columns (List[str]): A list of column names to insert values 
-            into. 
-    -
-    Returns:
-        str: A SQL insert statement as a str.
-    """
-    return f"INSERT INTO {table_name} ({', '.join(columns)}) "
-
-
-def gen_select(
-        table_name: str, 
-        columns: List[str],
-        group_by: Optional[List[str]] = None) -> str:
-    """
-    Convenience function for generating a select statement based on a 
-    passed dictionary.
-    -
-    Args:
-        table_name (str): The name of the table to select from. 
-        columns (List[str]): A list of SQL strings valid as column 
-            values to select.
-        group_by (Optional[List[str]], optional): A list of SQL strings 
-            valid as columns to group by. Defaults to None.
-    -
-    Returns:
-        str: A SQL select statement as a str.
-    """
-    base = f"SELECT {', '.join(columns)}"
-    group_by = f" GROUP BY {', '.join(group_by)}" if group_by else ''
-    return f'{base} FROM {table_name}{group_by};'

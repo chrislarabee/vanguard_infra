@@ -2,18 +2,17 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from ..callcenter import run
-from ..datastore import database as db
-
+from app import run
+from app.db import models
 
 @pytest.fixture
 def sample_calls():
     return [
-        db.Call(ohvfid='001', call_result=0),
-        db.Call(ohvfid='002', call_result=1),
-        db.Call(ohvfid='003', call_result=0),
-        db.Call(ohvfid='004', call_result=0),
-        db.Call(ohvfid='005', call_result=1),
+        models.Call(ohvfid='001', call_result=0),
+        models.Call(ohvfid='002', call_result=1),
+        models.Call(ohvfid='003', call_result=0),
+        models.Call(ohvfid='004', call_result=0),
+        models.Call(ohvfid='005', call_result=1),
     ]
 
 
@@ -23,7 +22,7 @@ def test_db(sample_calls):
         "sqlite://",
         connect_args={"check_same_thread": False}
     )
-    db.Base.metadata.create_all(engine)
+    models.Base.metadata.create_all(engine)
     TestingSession = sessionmaker(engine)
     s = TestingSession()
     s.add_all(sample_calls)

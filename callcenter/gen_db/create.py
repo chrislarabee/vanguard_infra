@@ -6,29 +6,31 @@ import sqlite3
 
 import sqlalchemy as sa
 from sqlalchemy.engine import Engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, Session
 
 from .prepdata import PrepData
-from . import constants, lib, database as db, util as u
-
+from app.db import models
+from . import lib
+import constants
+import util as u
 
 def setup_dirs(recreate=False):
     if recreate:
-        shutil.rmtree(constants.SIMDB)
-    constants.SIMDB.mkdir(exist_ok=True)
+        shutil.rmtree(constants.SIM)
+    constants.SIM.mkdir(exist_ok=True)
 
 
 def build_out_db(source_table: str):
     print('Begin database build out...')
     u.print_bar()
-    conn = sqlite3.connect(constants.SIMDB.joinpath('datasets.db'))
+    conn = sqlite3.connect(constants.SIMDB)
     c = conn.cursor()
     try:
         print('Populating census blocks (cenblocks) table...')
-        c.execute(db.gen_populate_cenblocks(source_table))
+        c.execute(lib.gen_populate_cenblocks(source_table))
         conn.commit()
         print('Populating voters table...')
-        c.execute(db.gen_populate_voters(source_table))
+        c.execute(lib.gen_populate_voters(source_table))
         conn.commit()
         print('Table population complete.')
         u.print_bar()
@@ -37,20 +39,18 @@ def build_out_db(source_table: str):
     print('Database build out complete.')
 
 
-def gen_and_populate_calls(engine: Engine):
+def gen_and_populate_calls(session: Session):
     u.print_bar()
     print('Begin simulated call data generation...')
     u.print_bar()
-    Session = sessionmaker(bind=engine)
-    s = Session()
     print('Clearing out any existing call data...')
-    s.execute(sa.delete(db.Call))
-    s.commit()
+    session.execute(sa.delete(models.Call))
+    session.commit()
     print('Generating new simulated call data...')
     try:
-        db.gen_call_data(s, batch_size=10000)
+        lib.gen_call_data(session, batch_size=10000)
     finally:
-        s.close()
+        session.close()
     u.print_bar()
     print('Simulated call data generated.')
 
@@ -87,16 +87,17 @@ if __name__ == "__main__":
         p.execute(raw_file.stem)
         u.print_bar()
     
-    engine = sa.create_engine('sqlite:///datastore/sim_db/datasets.db')
+    engine = sa.create_engine(constants.SQL_ALCHEMY_SIMDB)
     
     if args.recreate in ['all', 'db']:
         print('Begin table creation.')
         u.print_bar()
-        db.Base.metadata.drop_all(engine)
-        db.Base.metadata.create_all(engine)
+        models.Base.metadata.drop_all(engine)
+        models.Base.metadata.create_all(engine)
         print('Table creation complete.')
         u.print_bar()
         build_out_db(raw_file.stem)
 
     if args.recreate in ['all', 'call']:
-        gen_and_populate_calls(engine)
+        s = u.connect_to_sim_db(engine)
+        gen_and_populate_calls(s)

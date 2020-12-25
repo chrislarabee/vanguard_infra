@@ -8,7 +8,7 @@ from datetime import datetime as dt
 import pandas as pd
 import datagenius as dg
 
-from . import constants, util as u
+import constants, util as u
 
 class PrepData:
     """
@@ -35,7 +35,7 @@ class PrepData:
             prep_func: Callable, 
             batch_size: int = 100000):
         self._func = prep_func
-        self._prep_cache = constants.SIMDB.joinpath('prep_cache.json')
+        self._prep_cache = constants.SIM.joinpath('prep_cache.json')
         self.batch_size: int = batch_size
         self._header: list = None
         self._chunks = 1
@@ -94,8 +94,8 @@ class PrepData:
                 if ignore:
                     print('Removing ignored columns...')
                     raw.drop(columns=ignore, inplace=True)
-                print(f'Writing chunk to {constants.SIMDB}/datasets db...')
-                raw.genius.to_sqlite(constants.SIMDB, file_name, drop_first=False)
+                print(f'Writing chunk to {constants.SIM}/datasets db...')
+                raw.genius.to_sqlite(constants.SIM, file_name, drop_first=False)
                 print(
                     f'Chunk {chunks} processed (Rows {self._rows_processed} to '
                     f'{self._rows_processed + len(raw)}). '
