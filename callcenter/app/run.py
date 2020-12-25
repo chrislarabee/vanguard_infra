@@ -1,12 +1,13 @@
 import math
 import time
+import json
 
 from kafka import KafkaProducer
 import sqlalchemy as sa
 from sqlalchemy.orm import sessionmaker, Session
 
 from .db.models import Call
-import util as u
+from . import util as u
 
 
 def call_stream_generator(db: Session, batch_size: int = 10000):
@@ -26,10 +27,11 @@ def stream_calls(db: Session, batch_size: int = 10000, secs_btw: int = 2):
         print(f'Sending batch {i} to kafka server...')
         for j, call in enumerate(call_batch, 1):
             print(f'Streaming call {j}...', end='\r')
-            producer.send(
-                'incoming_calls', 
-                dict(ohvfid=call.ohvfid, call_result=call.call_result)
-            )
+            b = json.dumps(dict(
+                ohvfid=call.ohvfid, 
+                call_result=call.call_result
+            ))
+            producer.send('incoming_calls', b.encode('utf-8'))
         time.sleep(secs_btw)
 
 

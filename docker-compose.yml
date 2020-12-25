@@ -27,4 +27,4 @@ services:
     - "8001:8001"
     volumes:
       - ./callcenter/app:/app
-      - ./datastore/sim_db:/datastore/sim_db
+      - ./callcenter/datastore/sim_db:/app/datastore/sim_db

@@ -8,7 +8,7 @@ from datetime import datetime as dt
 import pandas as pd
 import datagenius as dg
 
-import constants, util as u
+from app import constants, util as u
 
 class PrepData:
     """

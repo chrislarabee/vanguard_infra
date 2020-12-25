@@ -10,9 +10,9 @@ from sqlalchemy.orm import sessionmaker, Session
 
 from .prepdata import PrepData
 from app.db import models
+from app import util as u, constants
 from . import lib
-import constants
-import util as u
+
 
 def setup_dirs(recreate=False):
     if recreate:
