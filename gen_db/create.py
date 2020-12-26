@@ -10,15 +10,17 @@ from sqlalchemy.orm import sessionmaker, Session
 import pandas as pd
 
 from .prepdata import PrepData
-from app.db import models
-from app import util as u, constants
+from callcenter.app.db import models
+from callcenter.app import util as u, constants
 from . import lib
 
 
 def setup_dirs(recreate=False):
     if recreate:
-        shutil.rmtree(constants.SIM)
+        shutil.rmtree(constants.SIM, onerror=FileNotFoundError)
+        shutil.rmtree(constants.TRAIN, onerror=FileNotFoundError)
     constants.SIM.mkdir(exist_ok=True)
+    constants.TRAIN.mkdir(exist_ok=True)
 
 
 def build_out_db(source_table: str):

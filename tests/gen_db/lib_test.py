@@ -5,7 +5,7 @@ from sqlalchemy import create_engine, func as sa_func
 from sqlalchemy.orm import sessionmaker
 
 from gen_db import lib
-from app.db import models
+from callcenter.app.db import models
 
 
 @pytest.fixture
