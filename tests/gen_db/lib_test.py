@@ -42,7 +42,7 @@ def test_gen_populate_cenblocks():
     result = lib.gen_populate_cenblocks('oh_dist4')
     assert 'MAX(totalpop)' in result
     assert 'SUM(is_donor)' in result
-    assert ' (blockgeoid,' in result
+    assert ' (id, blockgeoid,' in result
     assert ' FROM oh_dist4 GROUP BY blockgeoid;' in result
 
 

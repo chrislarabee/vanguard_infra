@@ -1,8 +1,9 @@
 from typing import List
 
 import sqlalchemy as sa
-from sqlalchemy import Column, Integer, String, Float
+from sqlalchemy import Column, Integer, String, Float, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
 
 
 class Base:
@@ -22,7 +23,8 @@ Base = declarative_base(cls=Base)
 class CensusBlock(Base):
     __tablename__ = 'cenblocks'
 
-    blockgeoid = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True)
+    blockgeoid = Column(Integer)
     totalpop = Column(Integer)
     total_donors = Column(Float)
     donation_total = Column(Float)
@@ -121,6 +123,7 @@ class Voter(Base):
     __tablename__ = 'voters'
     
     id = Column(Integer, primary_key=True)
+    ohvfid = Column(String)
     first_name = Column(String)
     middle_name = Column(String)
     last_name = Column(String)
@@ -131,12 +134,11 @@ class Voter(Base):
     city = Column(String)
     state = Column(String)
     zip = Column(Integer) 
-    plus4 = Column(Float)
+    plus4 = Column(Integer)
     # Some voters have more than 1 precinct/district_num.
     # 'precinct = Column(String)
     # 'district_num = Column(Integer) 
-    ohvfid = Column(String)
-    blockgeoid = Column(Integer) 
+    blockgeoid = Column(Integer)
     demdonationamounts = Column(String)
     demcommitteecodes = Column(String)
     repdonationamounts = Column(String)
@@ -165,7 +167,8 @@ class Call(Base):
 class District(Base):
     __tablename__ = 'districts'
 
-    district_num = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True)
+    district_num = Column(Integer)
     district = Column(String)
     totalpop = Column(Integer)
     total_donors = Column(Float)
