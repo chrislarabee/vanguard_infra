@@ -7,6 +7,7 @@ import sqlite3
 import sqlalchemy as sa
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker, Session
+import pandas as pd
 
 from .prepdata import PrepData
 from app.db import models
@@ -39,7 +40,11 @@ def build_out_db(source_table: str):
     print('Database build out complete.')
 
 
-def gen_and_populate_calls(session: Session):
+def gen_and_populate_calls(
+        session: Session,
+        pos_resp_rate: float = 0.1,
+        num_samples: int = None,
+        batch_size: int = 250000):
     u.print_bar()
     print('Begin simulated call data generation...')
     u.print_bar()
@@ -48,7 +53,11 @@ def gen_and_populate_calls(session: Session):
     session.commit()
     print('Generating new simulated call data...')
     try:
-        lib.gen_call_data(session, batch_size=10000)
+        lib.gen_call_data(
+            session, 
+            pos_resp_rate=pos_resp_rate,
+            num_samples=num_samples,
+            batch_size=batch_size)
     finally:
         session.close()
     u.print_bar()
@@ -74,6 +83,43 @@ if __name__ == "__main__":
              'n=Do not re-create anything (this is the default)).'
     )
 
+    parser.add_argument(
+        '--prep_batch_size', '-b',
+        type=int,
+        default=100000,
+        help='The batch size for the data preparation stage. Default is '
+             '100,000'
+    )
+
+    parser.add_argument(
+        '--call_batch_size', '-s',
+        type=int,
+        default=250000,
+        help='The batch size for the simulated call generation stage. '
+             'Default is 250,000'
+    )
+
+    parser.add_argument(
+        '--num_call_samples', '-n',
+        type=int,
+        help='The # of call samples to generate. Default is the # of '
+             'records in the voter table.'
+    )
+
+    parser.add_argument(
+        '--pos_resp_rate', '-p',
+        type=float,
+        default=0.1,
+        help='The percentage of call samples to be generated as positive '
+             'responses. Default is 0.1.'
+    )
+
+    parser.add_argument(
+        '--manual_header', '-m',
+        help='The name of a csv file in datastore/templates to pull the '
+             'header from. Useful if your raw data file has no header row.'
+    )
+
     args = parser.parse_args()
 
     raw_file = args.raw_file
@@ -83,7 +129,15 @@ if __name__ == "__main__":
     setup_dirs(args.recreate == 'all')
 
     if args.recreate == 'all':
-        p = PrepData(lib.prep_raw_data)
+        h = None
+        if args.manual_header:
+            h = pd.read_csv(f'datastore/templates/{args.manual_header}')
+            h = h['column'].tolist()
+        p = PrepData(
+            lib.prep_raw_data, 
+            batch_size=args.prep_batch_size,
+            manual_header=h
+        )
         p.execute(raw_file.stem)
         u.print_bar()
     
@@ -100,4 +154,9 @@ if __name__ == "__main__":
 
     if args.recreate in ['all', 'call']:
         s = u.connect_to_sim_db(engine)
-        gen_and_populate_calls(s)
+        gen_and_populate_calls(
+            s,
+            pos_resp_rate=args.pos_resp_rate,
+            num_samples=args.num_call_samples,
+            batch_size=args.call_batch_size
+        )

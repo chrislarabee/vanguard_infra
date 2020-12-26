@@ -1,6 +1,6 @@
 import os
 import logging as log
-from typing import Callable
+from typing import Callable, List
 from pathlib import Path
 import json
 from datetime import datetime as dt
@@ -25,7 +25,6 @@ class PrepData:
         prep_func (Callable): A function, which must accept two
             arguments: a pandas DataFrame and a datagenius 
             GeniusMetadata object. 
-        model_dir (str): The name of the target directory in models.
         batch_size (int): The # to divide the raw input data into,
             default is 100,000. Pick a # that your PC can efficiently 
             process in memory.
@@ -33,11 +32,12 @@ class PrepData:
     def __init__(
             self, 
             prep_func: Callable, 
-            batch_size: int = 100000):
+            batch_size: int = 100000, 
+            manual_header: List[str] = None):
         self._func = prep_func
         self._prep_cache = constants.SIM.joinpath('prep_cache.json')
         self.batch_size: int = batch_size
-        self._header: list = None
+        self._header: list = manual_header
         self._chunks = 1
         self._rows_processed = 0
 
@@ -87,7 +87,7 @@ class PrepData:
                     raw.columns = h
                 print('Beginning preprocessing...')
                 step_start = dt.now()
-                raw, md = raw.genius.preprocess()
+                raw, md = raw.genius.preprocess(manual_header=self._header)
                 print(f'Preprocess complete. Runtime = {dt.now() - step_start}')
                 print(f'Applying {self._func.__name__}...')
                 raw, md = self._func(raw, md)
