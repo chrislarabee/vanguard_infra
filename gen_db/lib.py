@@ -4,11 +4,13 @@ import re
 import datetime as dt
 
 from sqlalchemy.orm import Session
+from sqlalchemy.sql import func
 import numpy as np
 import pandas as pd
 import datagenius as dg
 
 from callcenter.app.db.models import CensusBlock, Voter, Call
+from callcenter.app import constants
 
 
 def donation_dt_to_datetime(d_date: str) -> (dt.datetime, str):
@@ -82,6 +84,26 @@ def prep_raw_data(
     return df, md
 
 
+def gen_start_batch(
+        session: Session,
+        batch_size: int, 
+        num_samples: Optional[int] = None,
+        model=None) -> (int, int, int):
+    if num_samples is None:
+        num_samples = session.query(model).count()
+    start = 1
+    end = batch_size if batch_size < num_samples else num_samples
+    num_batches = math.ceil(num_samples / batch_size)
+    return start, end, num_batches
+
+
+def print_batch_progress(current: int, start: int, end: int, num_batches: int):
+    print(
+        f'Processing batch {current} of {num_batches} (rows {start} to '
+        f'{end})...', end='\r'
+    )
+
+
 def gen_call_data(
         session: Session,
         pos_resp_rate: Optional[float] = 0.1,
@@ -104,19 +126,13 @@ def gen_call_data(
             voter table is very large. Defaults to 250000, or 
             num_samples if that is lower.
     """
-    if num_samples is None:
-        num_samples = session.query(Voter).count()
-    start = 1
-    end = batch_size if batch_size < num_samples else num_samples
-    num_batches = math.ceil(num_samples / batch_size)
+    start, end, num_batches = gen_start_batch(
+        session, batch_size, num_samples, Voter)
     for i in range(num_batches):
-        print(
-            f'Processing batch {i + 1} of {num_batches} (rows {start} to '
-            f'{end})...', end='\r'
-        )
+        print_batch_progress(i + 1, start, end, num_batches)
         batch = session.query(Voter, Voter.ohvfid).\
-                filter(Voter.id>=start).\
-                filter(Voter.id<=end).all()
+            filter(Voter.id>=start).\
+            filter(Voter.id<=end).all()
         df = pd.DataFrame(batch)
         x = df.sample(frac=pos_resp_rate).index.tolist()
         df['result'] = df.index.isin(x).astype(int)
@@ -125,6 +141,34 @@ def gen_call_data(
             axis=1)
         session.add_all(list(calls))
         session.commit()
+        start += batch_size
+        end += batch_size
+    print('\nAll batches successfully processed.')
+
+
+def prep_cenblock_training_data(
+        session: Session,
+        num_samples: Optional[int] = None,
+        batch_size: Optional[int] = 250000) -> None:
+    start, end, num_batches = gen_start_batch(
+        session, batch_size, num_samples, CensusBlock)
+    first_batch = True
+    write_mode = 'w'
+    for i in range(num_batches):
+        print_batch_progress(i + 1, start, end, num_batches)
+        batch = session.query(CensusBlock).\
+            filter(CensusBlock.id>=start).\
+            filter(CensusBlock.id<=end).all()
+        breakpoint()
+        df = pd.DataFrame(batch)
+        df['donor_pct'] = df['total_donors'] / df['totalpop']
+        df.to_csv(
+            constants.TRAIN.joinpath('cenblocks.csv'),
+            header=first_batch,
+            mode=write_mode
+        )
+        write_mode = 'a'
+        first_batch = False
         start += batch_size
         end += batch_size
     print('\nAll batches successfully processed.')
@@ -145,6 +189,7 @@ def gen_populate_cenblocks(source_table: str) -> str:
     do_nothing = ['blockgeoid']
     select_cols = []
     cenblocks_cols = CensusBlock.gen_column_list()
+    cenblocks_cols.pop(0) # Remove id column.
     for k in cenblocks_cols:
         if k in do_nothing:
             select_cols.append(k)

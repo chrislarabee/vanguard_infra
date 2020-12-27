@@ -46,7 +46,7 @@ def gen_and_populate_calls(
         session: Session,
         pos_resp_rate: float = 0.1,
         num_samples: int = None,
-        batch_size: int = 250000):
+        batch_size: int = 100000):
     u.print_bar()
     print('Begin simulated call data generation...')
     u.print_bar()
@@ -65,6 +65,30 @@ def gen_and_populate_calls(
     u.print_bar()
     print('Simulated call data generated.')
 
+
+def create_training_data(
+        session: Session,
+        num_samples: int = None,
+        batch_size: int = 100000): 
+    u.print_bar()
+    print('Begin production of training data...')
+    u.print_bar()
+    print('Clearing out any existing census block rating training data...')
+    p = constants.TRAIN.joinpath('cenblocks.csv')
+    if p.exists:
+        p.unlink()
+    print('Preparing new census block rating training data...')
+    try:
+        lib.prep_cenblock_training_data(
+            session,
+            num_samples=num_samples,
+            batch_size=batch_size
+        )
+    finally:
+        session.close()
+    print('Census block rating training data prep complete.')
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         'Create a simulated database from the target raw_data.'
@@ -80,32 +104,27 @@ if __name__ == "__main__":
         '--recreate', '-c', 
         default='n',
         help='Determines what parts, if any, of the simulated database '
-             'to create from scratch (db=Build out the database, '
-             'call=Re-generate the call data, all=Recreate everything, ' 
+             'to create from scratch ('
+             'db=Build out the database, '
+             'call=Re-generate the call data, '
+             'train=Re-prep the training data, '
+             'all=Recreate everything, ' 
              'n=Do not re-create anything (this is the default)).'
     )
 
     parser.add_argument(
-        '--prep_batch_size', '-b',
+        '--batch_size', '-b',
         type=int,
         default=100000,
-        help='The batch size for the data preparation stage. Default is '
-             '100,000'
+        help='The batch size for various steps of the data preparation '
+             'stage. Default is 100,000'
     )
 
     parser.add_argument(
-        '--call_batch_size', '-s',
+        '--num_samples', '-n',
         type=int,
-        default=250000,
-        help='The batch size for the simulated call generation stage. '
-             'Default is 250,000'
-    )
-
-    parser.add_argument(
-        '--num_call_samples', '-n',
-        type=int,
-        help='The # of call samples to generate. Default is the # of '
-             'records in the voter table.'
+        help='The # of call/census samples to generate. Default is '
+             'the # of records in the voter/cenblocks table.'
     )
 
     parser.add_argument(
@@ -137,7 +156,7 @@ if __name__ == "__main__":
             h = h['column'].tolist()
         p = PrepData(
             lib.prep_raw_data, 
-            batch_size=args.prep_batch_size,
+            batch_size=args.batch_size,
             manual_header=h
         )
         p.execute(raw_file.stem)
@@ -154,11 +173,20 @@ if __name__ == "__main__":
         u.print_bar()
         build_out_db(raw_file.stem)
 
-    if args.recreate in ['all', 'call']:
+    if args.recreate in ['all', 'call', 'train']:
         s = u.connect_to_sim_db(engine)
-        gen_and_populate_calls(
-            s,
-            pos_resp_rate=args.pos_resp_rate,
-            num_samples=args.num_call_samples,
-            batch_size=args.call_batch_size
-        )
+        if args.recreate in ['all', 'call']:
+            gen_and_populate_calls(
+                s,
+                pos_resp_rate=args.pos_resp_rate,
+                num_samples=args.num_samples,
+                batch_size=args.batch_size
+            )
+        if args.recreate in ['all', 'train']:
+            create_training_data(
+                s,
+                num_samples=args.num_samples,
+                batch_size=args.batch_size
+            )
+            
+

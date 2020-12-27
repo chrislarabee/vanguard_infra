@@ -1,11 +1,14 @@
 from pathlib import Path
+import shutil
 
 import pytest
 from sqlalchemy import create_engine, func as sa_func
 from sqlalchemy.orm import sessionmaker
+import pandas as pd
 
 from gen_db import lib
 from callcenter.app.db import models
+from callcenter.app import constants
 
 
 @pytest.fixture
@@ -18,7 +21,16 @@ def sample_voters():
 
 
 @pytest.fixture
-def test_db(sample_voters):
+def sample_cenblocks():
+    return [
+        models.CensusBlock(blockgeoid=1, total_donors=50, totalpop=200),
+        models.CensusBlock(blockgeoid=2, total_donors=5, totalpop=200),
+        models.CensusBlock(blockgeoid=3, total_donors=100, totalpop=200),
+    ]
+
+
+@pytest.fixture
+def test_db(sample_voters, sample_cenblocks):
     engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False}
@@ -27,9 +39,18 @@ def test_db(sample_voters):
     TestingSession = sessionmaker(engine)
     s = TestingSession()
     s.add_all(sample_voters)
+    s.add_all(sample_cenblocks)
     s.commit()
     yield s
     s.close()
+
+
+@pytest.fixture
+def output_dir():
+    p = Path('output')
+    p.mkdir(exist_ok=True)
+    yield p
+    shutil.rmtree(p)
 
 
 def test_gen_call_data(test_db):
@@ -38,12 +59,21 @@ def test_gen_call_data(test_db):
     assert test_db.query(sa_func.sum(models.Call.call_result)).one()[0] == 1
 
 
+def test_prep_training_data(test_db, output_dir,  monkeypatch):
+    monkeypatch.setattr(constants, 'TRAIN', output_dir)
+    lib.prep_cenblock_training_data(test_db, batch_size=1)
+    df = pd.read_csv(output_dir.joinpath('cenblocks.csv'))
+    assert len(df) == 3
+    assert df['donor_pct'].tolist() == [0.25, 0.025, 0.5]
+
+
 def test_gen_populate_cenblocks():
     result = lib.gen_populate_cenblocks('oh_dist4')
     assert 'MAX(totalpop)' in result
     assert 'SUM(is_donor)' in result
-    assert ' (id, blockgeoid,' in result
+    assert ' (blockgeoid,' in result
     assert ' FROM oh_dist4 GROUP BY blockgeoid;' in result
+    assert ' id, ' not in result
 
 
 def test_gen_populate_voters():
