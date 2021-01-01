@@ -9,7 +9,10 @@ from . import constants
 
 def connect_to_sim_db(engine: Engine = None) -> Session:
     if engine is None:
-        engine = sa.create_engine(constants.SQL_ALCHEMY_SIMDB)
+        engine = sa.create_engine(
+            constants.SQL_ALCHEMY_SIMDB, 
+            connect_args=dict(check_same_thread=False)
+        )
     LocalSession = sessionmaker(bind=engine)
     return LocalSession()
 

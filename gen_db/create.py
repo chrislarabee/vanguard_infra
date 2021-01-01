@@ -43,31 +43,33 @@ def build_out_db(source_table: str):
 
 
 def gen_and_populate_calls(
-        session: Session,
+        engine: Engine,
         pos_resp_rate: float = 0.1,
         num_samples: int = None,
         batch_size: int = 100000):
     u.print_bar()
     print('Begin simulated call data generation...')
     u.print_bar()
+    session = u.connect_to_sim_db(engine)
     print('Clearing out any existing call data...')
-    session.execute(sa.delete(models.Call))
-    session.commit()
-    print('Generating new simulated call data...')
     try:
-        lib.gen_call_data(
-            session, 
-            pos_resp_rate=pos_resp_rate,
-            num_samples=num_samples,
-            batch_size=batch_size)
+        session.execute(sa.delete(models.Call))
+        session.commit()
     finally:
         session.close()
+    print('Generating new simulated call data...')
+    session = u.connect_to_sim_db(engine)
+    lib.gen_call_data(
+        session, 
+        pos_resp_rate=pos_resp_rate,
+        num_samples=num_samples,
+        batch_size=batch_size)
     u.print_bar()
     print('Simulated call data generated.')
 
 
 def create_training_data(
-        session: Session,
+        engine: Engine,
         num_samples: int = None,
         batch_size: int = 100000): 
     u.print_bar()
@@ -75,9 +77,10 @@ def create_training_data(
     u.print_bar()
     print('Clearing out any existing census block rating training data...')
     p = constants.TRAIN.joinpath('cenblocks.csv')
-    if p.exists:
+    if p.exists():
         p.unlink()
     print('Preparing new census block rating training data...')
+    session = u.connect_to_sim_db(engine)
     try:
         lib.prep_cenblock_training_data(
             session,
@@ -162,7 +165,10 @@ if __name__ == "__main__":
         p.execute(raw_file.stem)
         u.print_bar()
     
-    engine = sa.create_engine(constants.SQL_ALCHEMY_SIMDB)
+    engine = sa.create_engine(
+        constants.SQL_ALCHEMY_SIMDB,
+        connect_args=dict(check_same_thread=False)
+    )
     
     if args.recreate in ['all', 'db']:
         print('Begin table creation.')
@@ -174,19 +180,17 @@ if __name__ == "__main__":
         build_out_db(raw_file.stem)
 
     if args.recreate in ['all', 'call', 'train']:
-        s = u.connect_to_sim_db(engine)
         if args.recreate in ['all', 'call']:
             gen_and_populate_calls(
-                s,
+                engine,
                 pos_resp_rate=args.pos_resp_rate,
                 num_samples=args.num_samples,
                 batch_size=args.batch_size
             )
         if args.recreate in ['all', 'train']:
             create_training_data(
-                s,
+                engine,
                 num_samples=args.num_samples,
                 batch_size=args.batch_size
             )
             
-
