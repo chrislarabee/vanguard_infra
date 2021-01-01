@@ -174,7 +174,10 @@ def gen_populate_cenblocks(source_table: str) -> str:
         str: A SQL insert and select statement as a str, tailored to the 
             needs of the cenblocks table.
     """
-    do_sum = dict(total_donors='SUM(is_donor)', donation_total='SUM(total)') 
+    do_func = dict(
+        total_donors='SUM(is_donor)', 
+        donation_total='SUM(total)',
+    ) 
     do_nothing = ['blockgeoid']
     select_cols = []
     cenblocks_cols = CensusBlock.gen_column_list()
@@ -182,8 +185,8 @@ def gen_populate_cenblocks(source_table: str) -> str:
     for k in cenblocks_cols:
         if k in do_nothing:
             select_cols.append(k)
-        elif k in do_sum.keys():
-            select_cols.append(do_sum[k])
+        elif k in do_func.keys():
+            select_cols.append(do_func[k])
         else:
             select_cols.append(f'MAX({k})')
     insert = gen_insert_table('cenblocks', cenblocks_cols)
