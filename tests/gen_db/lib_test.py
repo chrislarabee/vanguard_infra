@@ -65,6 +65,15 @@ def test_prep_training_data(test_db, output_dir,  monkeypatch):
     df = pd.read_csv(output_dir.joinpath('cenblocks.csv'))
     assert len(df) == 3
     assert df['donor_pct'].tolist() == [0.25, 0.025, 0.5]
+    assert len(df.columns) == len(models.CensusBlock.gen_column_list()) + 1
+
+
+def test_prep_training_data_w_sample_cap(test_db, output_dir, monkeypatch):
+    monkeypatch.setattr(constants, 'TRAIN', output_dir)
+    lib.prep_cenblock_training_data(test_db, num_samples=2, batch_size=1)
+    df = pd.read_csv(output_dir.joinpath('cenblocks.csv'))
+    assert len(df) == 2
+    assert df['donor_pct'].tolist() == [0.25, 0.025]
 
 
 def test_gen_populate_cenblocks():
