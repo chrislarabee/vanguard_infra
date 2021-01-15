@@ -149,6 +149,7 @@ def prep_cenblock_training_data(
             f'{rows_processed + len(df)}...', end='\r'
         )
         df['donor_pct'] = df['total_donors'] / df['totalpop']
+        df.drop(columns=['id', 'blockgeoid', 'total_donors'], inplace=True)
         df.to_csv(
             constants.TRAIN.joinpath('cenblocks.csv'),
             header=first_batch,
