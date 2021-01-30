@@ -11,17 +11,19 @@ class Base:
     def gen_column_list(cls) -> List[str]:
         """
         Returns:
-            List[str, ...]: A list of strings, the names of all the 
+            List[str, ...]: A list of strings, the names of all the
                 columns of the model.
         """
         return [i.key for i in sa.inspect(cls).mapper.column_attrs]
+
 
 # Using this approach instead of as_declarative decorator helps vscode's
 # error checking.
 Base = declarative_base(cls=Base)
 
+
 class CensusBlock(Base):
-    __tablename__ = 'cenblocks'
+    __tablename__ = "cenblocks"
 
     id = Column(Integer, primary_key=True)
     blockgeoid = Column(Integer)
@@ -114,14 +116,12 @@ class CensusBlock(Base):
     percentnohealthinsurance = Column(Float)
 
     def __repr__(self):
-        return (
-            f"<Cenblock(blockgeoid={self.blockgeoid}), totalpop={self.totalpop}>"
-        )
+        return f"<Cenblock(blockgeoid={self.blockgeoid}), totalpop={self.totalpop}>"
 
 
 class Voter(Base):
-    __tablename__ = 'voters'
-    
+    __tablename__ = "voters"
+
     id = Column(Integer, primary_key=True)
     ohvfid = Column(String)
     first_name = Column(String)
@@ -133,11 +133,11 @@ class Voter(Base):
     street2 = Column(String)
     city = Column(String)
     state = Column(String)
-    zip = Column(Integer) 
+    zip = Column(Integer)
     plus4 = Column(Integer)
     # Some voters have more than 1 precinct/district_num.
     # 'precinct = Column(String)
-    # 'district_num = Column(Integer) 
+    # 'district_num = Column(Integer)
     blockgeoid = Column(Integer)
     demdonationamounts = Column(String)
     demcommitteecodes = Column(String)
@@ -151,13 +151,11 @@ class Voter(Base):
     is_donor = Column(Integer)
 
     def __repr__(self):
-        return (
-            f"<Voter(id={self.id}, name={self.first_name} {self.last_name})>"
-        )
+        return f"<Voter(id={self.id}, name={self.first_name} {self.last_name})>"
 
 
 class Call(Base):
-    __tablename__ = 'calls'
+    __tablename__ = "calls"
 
     id = Column(Integer, primary_key=True)
     ohvfid = Column(String)
@@ -165,7 +163,7 @@ class Call(Base):
 
 
 class District(Base):
-    __tablename__ = 'districts'
+    __tablename__ = "districts"
 
     id = Column(Integer, primary_key=True)
     district_num = Column(Integer)

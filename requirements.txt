@@ -1,7 +1,7 @@
-pylint
 pytest
 sqlalchemy
 apache_beam
 kafka-python
 pandas
+flake8-black
 git+https://gitlab.com/mnhs/bipi/datagenius.git#egg=data-genius
