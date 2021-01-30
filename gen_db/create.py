@@ -6,12 +6,11 @@ import sqlite3
 
 import sqlalchemy as sa
 from sqlalchemy.engine import Engine
-from sqlalchemy.orm import sessionmaker, Session
 import pandas as pd
 
 from .prepdata import PrepData
-from callcenter.app.db import models
-from callcenter.app import util as u, constants
+from components.callcenter.app.db import models
+from components.callcenter.app import util as u, constants
 from . import lib
 
 

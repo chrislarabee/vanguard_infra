@@ -8,8 +8,8 @@ import numpy as np
 import pandas as pd
 import datagenius as dg
 
-from callcenter.app.db.models import CensusBlock, Voter, Call
-from callcenter.app import constants
+from components.callcenter.app.db.models import CensusBlock, Voter, Call
+from components.callcenter.app import constants
 
 
 def donation_dt_to_datetime(d_date: str) -> dt.datetime:

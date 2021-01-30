@@ -3,8 +3,7 @@ import time
 import json
 
 from kafka import KafkaProducer
-import sqlalchemy as sa
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import Session
 
 from .db.models import Call
 from . import util as u

@@ -7,8 +7,8 @@ from sqlalchemy.orm import sessionmaker
 import pandas as pd
 
 from gen_db import lib
-from callcenter.app.db import models
-from callcenter.app import constants
+from components.callcenter.app.db import models
+from components.callcenter.app import constants
 
 
 @pytest.fixture
@@ -62,7 +62,7 @@ def test_prep_training_data(test_db, output_dir, monkeypatch):
     df = pd.read_csv(output_dir.joinpath("cenblocks.csv"))
     assert len(df) == 3
     assert df["donor_pct"].tolist() == [0.25, 0.025, 0.5]
-    assert len(df.columns) == len(models.CensusBlock.gen_column_list()) + 1
+    assert len(df.columns) == len(models.CensusBlock.gen_column_list()) - 2
 
 
 def test_prep_training_data_w_sample_cap(test_db, output_dir, monkeypatch):
