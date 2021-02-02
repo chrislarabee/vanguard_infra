@@ -7,8 +7,7 @@ from sqlalchemy.orm import sessionmaker
 import pandas as pd
 
 from gen_db import lib
-from components.callcenter.app.db import models
-from components.callcenter.app import constants
+from vanguard.db import models, constants
 
 
 @pytest.fixture

@@ -6,10 +6,9 @@ import datetime as dt
 from sqlalchemy.orm import Session
 import numpy as np
 import pandas as pd
-import datagenius as dg
 
-from components.callcenter.app.db.models import CensusBlock, Voter, Call
-from components.callcenter.app import constants
+from vanguard.db.models import CensusBlock, Voter, Call
+from vanguard.db import constants
 
 
 def donation_dt_to_datetime(d_date: str) -> dt.datetime:
@@ -59,29 +58,25 @@ def unpack_donation_col(donation_col: str) -> Tuple[float, float, int]:
     return output
 
 
-def prep_raw_data(
-    df: pd.DataFrame, md: dg.GeniusMetadata = None
-) -> Tuple[pd.DataFrame, dg.GeniusMetadata]:
+def prep_raw_data(df: pd.DataFrame) -> pd.DataFrame:
     """
     Unpacks the dem donation data for each row in the raw district_data
     DataFrame and determines whether or not they are a donor. Performs a
     small amount of cleanup on the party_affiliation column.
-
+    -
     Args:
         df (DataFrame): A pandas DataFrame with a demdonationamounts
             column.
-        md (GeniusMetadata, optional): A GeniusMetadata object. Defaults
-            to None.
+    -
     Returns:
-        (DataFrame, GeniusMetadata): The transformed DataFrame and the
-            originally passed GeniusMetadata object.
+        (DataFrame): The transformed DataFrame.
     """
     df[["total", "avg", "days_since"]] = pd.DataFrame(
         df["demdonationamounts"].apply(unpack_donation_col).tolist(), index=df.index
     )
     df["party_affiliation"] = df["party_affiliation"].fillna("X")
     df["is_donor"] = df["total"].apply(lambda x: x > 0).astype("int")
-    return df, md
+    return df
 
 
 def gen_call_data(

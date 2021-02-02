@@ -8,7 +8,7 @@ from datetime import datetime as dt
 import pandas as pd
 import datagenius as dg
 
-from callcenter.app import constants, util as u
+from components.db import constants, util as u
 
 
 class PrepData:
@@ -39,8 +39,8 @@ class PrepData:
     ):
         self._func = prep_func
         self._prep_cache = constants.SIM.joinpath("prep_cache.json")
-        self.batch_size: int = batch_size
-        self._header: list = manual_header
+        self.batch_size = batch_size
+        self._header = manual_header
         self._chunks = 1
         self._rows_processed = 0
 

@@ -3,4 +3,5 @@ __pycache__
 *.json
 *.db
 *.csv
-components/vanguard/models/*
+vanguard/models/*
+.vscode

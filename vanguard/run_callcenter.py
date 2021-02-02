@@ -6,7 +6,7 @@ from kafka import KafkaProducer
 from sqlalchemy.orm import Session
 
 from .db.models import Call
-from . import util as u
+from .db import util as u
 
 
 def call_stream_generator(db: Session, batch_size: int = 10000):

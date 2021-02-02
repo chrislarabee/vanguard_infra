@@ -2,8 +2,8 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from components.callcenter.app import run
-from components.callcenter.app.db import models
+from vanguard import run_callcenter as run
+from vanguard.db import models
 
 
 @pytest.fixture

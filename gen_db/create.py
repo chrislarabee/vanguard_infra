@@ -9,8 +9,7 @@ from sqlalchemy.engine import Engine
 import pandas as pd
 
 from .prepdata import PrepData
-from components.callcenter.app.db import models
-from components.callcenter.app import util as u, constants
+from vanguard.db import models, util as u, constants
 from . import lib
 
 
