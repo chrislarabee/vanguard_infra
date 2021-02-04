@@ -20,25 +20,21 @@ services:
       KAFKA_CREATE_TOPICS: "incoming_calls:1:1"
     volumes:
      - /var/run/docker.sock:/var/run/docker.sock
-  # vanguard:
-  #   image: tensorflow/serving
-  #   tty: true
-  #   model_name: cenblocks
-  #   model_base_path: ./vanguard/models/cenblocks
-  #   ports:
-  #     - "8500:8500"
-  #   rest_api_ports:
-  #     - "8501:8501"
-  #   volumes:
-  #     - ./components/vanguard:/vanguard
-  #     - ./components/db:/vanguard/db
-  #     - ./datastore/sim_db:/datastore/sim_db
-  callcenter:
-    build: ./components/callcenter/
+  vanguard:
+    image: tensorflow/serving
     tty: true
     ports:
-    - "8001:8001"
+      - "8500:8500"
+      - "8501:8501"
     volumes:
-      - ./components/callcenter:/components/callcenter
-      - ./components/db:/components/db
-      - ./datastore/sim_db:/datastore/sim_db
+      - ./vanguard/models:/models
+    command: --model_config_file=/models/models.config
+  # callcenter:
+  #   build: ./components/callcenter/
+  #   tty: true
+  #   ports:
+  #   - "8001:8001"
+  #   volumes:
+  #     - ./components/callcenter:/components/callcenter
+  #     - ./components/db:/components/db
+  #     - ./datastore/sim_db:/datastore/sim_db

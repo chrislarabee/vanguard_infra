@@ -170,3 +170,11 @@ class District(Base):
     totalpop = Column(Integer)
     total_donors = Column(Float)
     donation_total = Column(Float)
+
+
+class CenblockRating(Base):
+    __tablename__ = "cenblock_ratings"
+
+    id = Column(Integer, primary_key=True)
+    blockgeoid = Column(Integer)
+    rating = Column(Float)
